@@ -1,0 +1,150 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+import sys
+import json 
+import os
+import re
+import numpy as np
+from time import time
+import tensorflow as tf
+import matplotlib.pyplot as plt
+import tensorflow_datasets as tfds
+import tensorflow as tf
+from tensorflow.keras.utils import plot_model
+
+tf.keras.utils.set_random_seed(1234)
+try:
+    tpu = tf.distribute.cluster_resolver.TPUClusterResolver()
+    print("Running on TPU {}".format(tpu.cluster_spec().as_dict()["worker"]))
+except ValueError:
+    tpu = None
+
+if tpu:
+    tf.config.experimental_connect_to_cluster(tpu)
+    tf.tpu.experimental.initialize_tpu_system(tpu)
+    strategy = tf.distribute.experimental.TPUStrategy(tpu)
+else:
+    strategy = tf.distribute.get_strategy()
+
+print(f"REPLICAS: {strategy.num_replicas_in_sync}")
+# Maximum sentence length
+MAX_LENGTH = 40
+
+# Maximum number of samples to preprocess
+MAX_SAMPLES = 50000
+
+# For tf.data.Dataset
+BATCH_SIZE = 64 * strategy.num_replicas_in_sync
+BUFFER_SIZE = 20000
+
+# For Transformer
+NUM_LAYERS = 2
+D_MODEL = 256
+NUM_HEADS = 8
+UNITS = 512
+DROPOUT = 0.1
+
+EPOCHS = 40
+
+import json
+import re
+
+def preprocess_sentence(sentence):
+    sentence = sentence.lower().strip()
+    # Creating a space between a word and the punctuation following it
+    sentence = re.sub(r"([?.!,])", r" \1 ", sentence)
+    sentence = re.sub(r'[" "]+', " ", sentence)
+    # Removing contractions
+    sentence = re.sub(r"i'm", "i am", sentence)
+    sentence = re.sub(r"he's", "he is", sentence)
+    sentence = re.sub(r"she's", "she is", sentence)
+    sentence = re.sub(r"it's", "it is", sentence)
+    sentence = re.sub(r"that's", "that is", sentence)
+    sentence = re.sub(r"what's", "what is", sentence)
+    sentence = re.sub(r"where's", "where is", sentence)
+    sentence = re.sub(r"how's", "how is", sentence)
+    sentence = re.sub(r"\'ll", " will", sentence)
+    sentence = re.sub(r"\'ve", " have", sentence)
+    sentence = re.sub(r"\'re", " are", sentence)
+    sentence = re.sub(r"\'d", " would", sentence)
+    sentence = re.sub(r"won't", "will not", sentence)
+    sentence = re.sub(r"can't", "cannot", sentence)
+    sentence = re.sub(r"n't", " not", sentence)
+    sentence = re.sub(r"n'", "ng", sentence)
+    sentence = re.sub(r"'bout", "about", sentence)
+    # Replacing everything with space except (a-z, A-Z, ".", "?", "!", ",")
+    sentence = re.sub(r"[^a-zA-Z?.!,]+", " ", sentence)
+    sentence = sentence.strip()
+    return sentence
+
+def load_intents(path_to_json):
+    with open(path_to_json, 'r') as file:
+        data = json.load(file)
+    
+    intents = data.get('intents', [])
+    questions_answers = []  # List to store paired questions and responses
+    
+    for intent in intents:
+        tag = intent.get('tag')
+        if tag:
+            patterns = [preprocess_sentence(pattern) for pattern in intent.get('patterns', [])]
+            responses = [preprocess_sentence(response) for response in intent.get('responses', [])]
+            for pattern in patterns:
+                for response in responses:
+                    questions_answers.append((pattern, response))
+    
+    return questions_answers
+
+# Define the path to your JSON file
+path_to_intents = r'C:\Users\PC\CHATBOT\Chatbot\reversedfiles.json\data.json'
+
+# Load and preprocess data
+questions_answers = load_intents(path_to_intents)
+
+# Separate questions and answers
+questions, answers = zip(*questions_answers)
+
+# Build tokenizer using tfds for both questions and answers
+tokenizer = tfds.deprecated.text.SubwordTextEncoder.build_from_corpus(
+    questions + answers, target_vocab_size=2**13
+)
+
+# Define start and end token to indicate the start and end of a sentence
+START_TOKEN, END_TOKEN = [tokenizer.vocab_size], [tokenizer.vocab_size + 1]
+
+# Vocabulary size plus start and end token
+VOCAB_SIZE = tokenizer.vocab_size + 2
+def tokenize_and_filter(inputs, outputs):
+    tokenized_inputs, tokenized_outputs = [], []
+
+    for (sentence1, sentence2) in zip(inputs, outputs):
+        sentence1 = START_TOKEN + tokenizer.encode(sentence1) + END_TOKEN
+        sentence2 = START_TOKEN + tokenizer.encode(sentence2) + END_TOKEN
+        if len(sentence1) <= MAX_LENGTH and len(sentence2) <= MAX_LENGTH:
+            tokenized_inputs.append(sentence1)
+            tokenized_outputs.append(sentence2)
+
+    tokenized_inputs = tf.keras.preprocessing.sequence.pad_sequences(
+        tokenized_inputs, maxlen=MAX_LENGTH, padding="post"
+    )
+    tokenized_outputs = tf.keras.preprocessing.sequence.pad_sequences(
+        tokenized_outputs, maxlen=MAX_LENGTH, padding="post"
+    )
+
+    return tokenized_inputs, tokenized_outputs
+
+# Apply the tokenization, filtering, and padding
+questions, answers = tokenize_and_filter(questions, answers)
+# Decoder inputs use the previous target as input, remove START_TOKEN from targets
+dataset = tf.data.Dataset.from_tensor_slices(
+    (
+        {"inputs": questions, "dec_inputs": answers[:, :-1]},
+        {"outputs": answers[:, 1:]},
+    )
+)
+
+
+dataset = dataset.cache()
+dataset = dataset.shuffle(BUFFER_SIZE)
+dataset = dataset.batch(BATCH_SIZE)
+dataset = dataset.prefetch(tf.data.AUTOTUNE
