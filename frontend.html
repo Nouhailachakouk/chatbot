@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Interface</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        /* Add your custom styles here */
+        .avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid #e84118;
+            padding: 2px;
+            flex: none;
+        }
+        .d-flex.text-end.justify-content-end .avatar {
+            order: 2;
+        }
+        .d-flex.text-end.justify-content-end .pe-2 {
+            order: 1;
+        }
+        input:focus {
+            outline: 0px !important;
+            box-shadow: none !important;
+        }
+        .card-text {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="card mx-auto" style="max-width:400px; position: relative; height: 600px;">
+            <div class="card-header bg-transparent">
+                <div class="navbar navbar-expand p-0">
+                    <ul class="navbar-nav me-auto align-items-center">
+                        <li class="nav-item">
+                            <a href="#!" class="nav-link">
+                                <div class="position-relative" style="width:50px; height: 50px; border-radius: 50%; border: 2px solid #e84118; padding: 2px">
+                                    <img src="HTML/img-1xl1aL1wzolKojE7n8gJ1.jpeg" class="img-fluid rounded-circle" alt="Profile Image">
+                                    <span class="position-absolute bottom-0 start-100 translate-middle p-1 bg-success border border-light rounded-circle">
+                                        <span class="visually-hidden">New alerts</span>
+                                    </span>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#!" class="nav-link">Nina</a>
+                        </li>
+                    </ul>
+                    <li class="nav-item">
+                        <a href="#!" class="nav-link">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </li>
+                </div>
+            </div>
+            <div class="card-body p-4" id="chatMessages" style="height: 500px; overflow-y: auto;"></div>
+            <div class="card-footer bg-white position-absolute w-100 bottom-0 m-0 p-1">
+                <div class="input-group">
+                    <input type="text" class="form-control border-0" placeholder="Write a message..." id="messageInput">
+                    <div class="input-group-text bg-transparent border-0">
+                        <button class="btn btn-light text-secondary" id="sendMessageBtn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendMessageBtn = document.getElementById('sendMessageBtn');
+
+        function addMessageToChat(message, sender) {
+            const messageDiv = document.createElement('div');
+            if (sender === 'bot') {
+                const avatarDiv = document.createElement('div');
+                avatarDiv.classList.add('position-relative', 'avatar');
+                avatarDiv.innerHTML = `
+                    <img src="HTML/img-eRJQeRtoLEmg17jNabSEX.jpeg" class="img-fluid rounded-circle" alt="Profile Image">
+                    <span class="position-absolute bottom-0 start-100 translate-middle p-1 bg-success border border-light rounded-circle">
+                        <span class="visually-hidden">New alerts</span>
+                    </span>
+                `;
+                messageDiv.appendChild(avatarDiv);
+            }
+
+            const messageContentDiv = document.createElement('div');
+            messageContentDiv.classList.add('pe-2');
+            messageContentDiv.innerHTML = `
+                <div>
+                    <div class="card card-text d-inline-block p-2 px-3 m-1">${message}</div>
+                </div>
+                <div>
+                    <div class="small">${getCurrentTime()}</div>
+                </div>
+            `;
+            messageDiv.appendChild(messageContentDiv);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll to bottom
+        }
+
+        function getCurrentTime() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+
+        sendMessageBtn.addEventListener('click', async function () {
+            const message = messageInput.value.trim();
+            if (message !== '') {
+                addMessageToChat(message, 'user'); // 'user' represents user
+                const response = await sendMessageToChatbot(message);
+                addMessageToChat(response, 'bot'); // 'bot' represents chatbot
+                messageInput.value = '';
+            }
+        });
+
+        async function sendMessageToChatbot(message) {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ prompt: message }),
+                });
+            
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Error:', errorData.error);
+                    return "Error: Unable to reach the chatbot.";
+                }
+                const data = await response.json();
+                return data.response || "Error: No response from server."; // Adjust based on your Flask response structure
+            } catch (error) {
+                console.error('Fetch error:', error);
+                return "Error: Unable to fetch response.";
+            }
+        }
+    </script>
+</body>
+</html>
