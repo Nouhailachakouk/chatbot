@@ -4,11 +4,39 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot Interface</title>
+    <title>3D Chatbot Interface</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
-        /* Add your custom styles here */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        
+        .container {
+            perspective: 1000px;
+        }
+        
+        .card {
+            max-width: 400px;
+            height: 600px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            border: 1px solid #ddd;
+            background-color: #fff;
+            overflow: hidden;
+            transform-style: preserve-3d;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Style for the avatar */
         .avatar {
             width: 50px;
             height: 50px;
@@ -17,25 +45,162 @@
             padding: 2px;
             flex: none;
         }
+        
+        /* Flex alignment for avatar */
         .d-flex.text-end.justify-content-end .avatar {
             order: 2;
         }
+        
         .d-flex.text-end.justify-content-end .pe-2 {
             order: 1;
         }
+        
+        /* Input focus style */
         input:focus {
             outline: 0px !important;
             box-shadow: none !important;
         }
+        
+        /* Style for chat text */
         .card-text {
             border: 2px solid #ddd;
             border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 70%;
+            transform: translateZ(5px);
+            transition: transform 0.2s;
+            font-size: 0.99rem; /* Increased text size */
+            padding: 10px; /* Added padding */
+            word-wrap: break-word; /* Handle long text */
+            margin-bottom: 10px; /* Spacing between messages */
+        }
+        
+        /* Hover effect for chat text */
+        .card-text:hover {
+            transform: translateZ(10px);
+        }
+        
+        /* Header style with buttons */
+        .card-header {
+            border-bottom: 2px solid #ddd;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Footer style */
+        .card-footer {
+            border-top: 2px solid #ddd;
+            border-radius: 0 0 20px 20px;
+        }
+        
+        /* Container for chat messages */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1; /* Allow it to take up remaining space */
+            overflow: hidden; /* Ensure no overflow from container */
+        }
+        
+        /* Container for individual messages */
+        .message-container {
+            flex-grow: 1;
+            overflow-y: auto; /* Allows vertical scrolling */
+            padding: 15px;
+            padding-bottom: 60px;
+            display: flex;
+            flex-direction: column;
+            scroll-behavior: smooth;
+        }
+        
+        /* Style for individual messages */
+        .message {
+            display: flex;
+        }
+        
+        /* User message style */
+        .message.user .card-text {
+            background-color: #e0f7fa;
+            align-self: flex-end;
+        }
+        
+        /* Bot message style */
+        .message.bot .card-text {
+            background-color: #f0f0f0;
+        }
+        
+        /* Time label for messages */
+        .message-time {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 2px;
+        }
+        
+        /* User message alignment */
+        .message.user {
+            justify-content: flex-end;
+        }
+        
+        /* Bot message alignment */
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        /* Example styles for collapsed class */
+        .card.collapsed {
+            height: 100px; /* Adjust height as needed */
+            overflow: hidden;
+        }
+        
+        /* Hover effect for descent button */
+        .slide-btn:hover {
+            color: #333333;
+        }
+        
+        /* Exit button style */
+        .exit-btn {
+            position: absolute;
+            top: 10px;
+            right: 50px; /* Position to leave space for descent button */
+            border: none;
+            background: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #888;
+            z-index: 1;
+        }
+        
+        /* Hover effect for exit button */
+        .exit-btn:hover {
+            color: #333;
+        }
+        
+        /* Descent button style */
+        .descent-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px; /* Align with the top-right corner */
+            border: none;
+            background: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #888;
+            z-index: 1;
+        }
+        
+        /* Hover effect for descent button */
+        .descent-btn:hover {
+            color: #333;
         }
     </style>
 </head>
 <body>
     <div class="container mt-4">
-        <div class="card mx-auto" style="max-width:400px; position: relative; height: 600px;">
+        <div class="card mx-auto" id="chatCard">
             <div class="card-header bg-transparent">
                 <div class="navbar navbar-expand p-0">
                     <ul class="navbar-nav me-auto align-items-center">
@@ -50,24 +215,25 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="#!" class="nav-link">Nina</a>
+                            <a href="#!" class="nav-link">AMSSNuR</a>
                         </li>
                     </ul>
                     <li class="nav-item">
-                        <a href="#!" class="nav-link">
-                            <i class="fas fa-times"></i>
-                        </a>
+                        <button class="slide-btn" id="slideBtn"><i class="fas fa-chevron-down"></i></button>
                     </li>
                 </div>
+                <button class="exit-btn" id="exitBtn"><i class="fas fa-times"></i></button>
             </div>
-            <div class="card-body p-4" id="chatMessages" style="height: 500px; overflow-y: auto;"></div>
-            <div class="card-footer bg-white position-absolute w-100 bottom-0 m-0 p-1">
-                <div class="input-group">
-                    <input type="text" class="form-control border-0" placeholder="Write a message..." id="messageInput">
-                    <div class="input-group-text bg-transparent border-0">
-                        <button class="btn btn-light text-secondary" id="sendMessageBtn">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
+            <div class="card-body chat-container">
+                <div class="message-container" id="chatMessages"></div>
+                <div class="card-footer bg-white position-absolute w-100 bottom-0 m-0 p-1">
+                    <div class="input-group">
+                        <input type="text" class="form-control border-0" placeholder="Write a message..." id="messageInput">
+                        <div class="input-group-text bg-transparent border-0">
+                            <button class="btn btn-light text-secondary" id="sendMessageBtn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -77,34 +243,45 @@
         const chatMessages = document.getElementById('chatMessages');
         const messageInput = document.getElementById('messageInput');
         const sendMessageBtn = document.getElementById('sendMessageBtn');
+        const chatCard = document.getElementById('chatCard');
+        const slideBtn = document.getElementById('slideBtn');
+        const exitBtn = document.getElementById('exitBtn');
+
+        function scrollToBottom() {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.scrollTop = chatMessages.scrollHeight - chatMessages.clientHeight + 60; // 60px for extra space
+        }
 
         function addMessageToChat(message, sender) {
             const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+
             if (sender === 'bot') {
                 const avatarDiv = document.createElement('div');
-                avatarDiv.classList.add('position-relative', 'avatar');
+                avatarDiv.classList.add('position-relative', 'avatar', 'me-2');
                 avatarDiv.innerHTML = `
-                    <img src="HTML/img-eRJQeRtoLEmg17jNabSEX.jpeg" class="img-fluid rounded-circle" alt="Profile Image">
+                    <img src="HTML/img-1xl1aL1wzolKojE7n8gJ1.jpeg" class="img-fluid rounded-circle" alt="Profile Image">
                     <span class="position-absolute bottom-0 start-100 translate-middle p-1 bg-success border border-light rounded-circle">
                         <span class="visually-hidden">New alerts</span>
                     </span>
                 `;
                 messageDiv.appendChild(avatarDiv);
-            }
+                scrollToBottom();
+                }
 
             const messageContentDiv = document.createElement('div');
-            messageContentDiv.classList.add('pe-2');
-            messageContentDiv.innerHTML = `
-                <div>
-                    <div class="card card-text d-inline-block p-2 px-3 m-1">${message}</div>
-                </div>
-                <div>
-                    <div class="small">${getCurrentTime()}</div>
-                </div>
-            `;
+            messageContentDiv.classList.add('card-text', 'p-2', 'px-3', 'm-1');
+            messageContentDiv.textContent = message;
+
+            const timeDiv = document.createElement('div');
+            timeDiv.classList.add('message-time');
+            timeDiv.textContent = getCurrentTime();
+
             messageDiv.appendChild(messageContentDiv);
+            messageDiv.appendChild(timeDiv);
+
             chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll to bottom
+            scrollToBottom(); // Auto-scroll to bottom
         }
 
         function getCurrentTime() {
@@ -133,7 +310,7 @@
                     },
                     body: JSON.stringify({ prompt: message }),
                 });
-            
+
                 if (!response.ok) {
                     const errorData = await response.json();
                     console.error('Error:', errorData.error);
@@ -146,6 +323,16 @@
                 return "Error: Unable to fetch response.";
             }
         }
+
+        slideBtn.addEventListener('click', () => {
+            chatCard.classList.toggle('collapsed');
+            slideBtn.innerHTML = chatCard.classList.contains('collapsed') ? '<i class="fas fa-chevron-up"></i>' : '<i class="fas fa-chevron-down"></i>';
+        });
+        exitBtn.addEventListener('click', function () {
+            if (confirm('Are you sure you want to exit?')) {
+                chatCard.style.display = 'none';
+            }
+        });
     </script>
 </body>
 </html>
