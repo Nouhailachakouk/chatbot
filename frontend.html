@@ -18,7 +18,7 @@
         .chat-container {
             position: fixed;
             bottom: 20px;
-            right: 20px;
+            left: 20px; /* Positioned on the left side */
             width: 350px;
             max-height: 500px;
             border-radius: 20px;
@@ -129,26 +129,30 @@
         .open-chat-btn {
             position: fixed;
             bottom: 20px;
-            right: 20px;
+            left: 20px; /* Positioned on the left side */
             width: 50px;
             height: 50px;
             background-color: #007bff;
             color: #fff;
             border: none;
             border-radius: 50%;
-            display: none;
+            display: flex;
             align-items: center;
             justify-content: center;
             font-size: 24px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             cursor: pointer;
         }
+
+        .open-chat-btn.hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="chat-container" id="chatContainer">
         <div class="chat-header" id="chatHeader">
-            <img src="HTML/img-1xl1aL1wzolKojE7n8gJ1.jpeg" alt=" AMSSNuR Profile Image">
+            <img src="HTML/img-1xl1aL1wzolKojE7n8gJ1.jpeg" alt="AMSSNuR Profile Image">
             <div class="title">AMSSNuR</div>
             <button class="toggle-btn" id="toggleBtn"><i class="fas fa-chevron-up"></i></button>
             <button class="close-btn" id="closeBtn"><i class="fas fa-times"></i></button>
@@ -172,7 +176,6 @@
         const openChatBtn = document.getElementById('openChatBtn');
 
         let isCollapsed = false;
-        let isChatVisible = true;
 
         function addMessageToChat(message, sender) {
             const messageDiv = document.createElement('div');
@@ -221,18 +224,20 @@
             isCollapsed = !isCollapsed;
             chatContainer.classList.toggle('collapsed', isCollapsed);
             toggleBtn.innerHTML = isCollapsed ? '<i class="fas fa-chevron-down"></i>' : '<i class="fas fa-chevron-up"></i>';
-            openChatBtn.style.display = isCollapsed ? 'flex' : 'none';
         });
 
         closeBtn.addEventListener('click', function () {
             chatContainer.style.display = 'none';
-            openChatBtn.style.display = 'flex';
+            openChatBtn.classList.remove('hidden');
         });
 
         openChatBtn.addEventListener('click', function () {
             chatContainer.style.display = 'flex';
-            openChatBtn.style.display = 'none';
+            openChatBtn.classList.add('hidden');
         });
+
+        // Initialize the button visibility
+        openChatBtn.classList.add('hidden');
     </script>
 </body>
 </html>
